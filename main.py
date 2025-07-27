@@ -8,7 +8,7 @@ import random
 import asyncio
 from datetime import datetime, timedelta
 
-# Инициализация бота (без прокси)
+# Инициализация бота
 bot = Bot(token='8084621912:AAG0zWp3tEn4voc6IyxoevvH96eUhVtVlxw')
 dp = Dispatcher(storage=MemoryStorage())
 DATA_FILE = 'user_data.json'
@@ -88,15 +88,9 @@ def get_main_keyboard(user_id):
         [InlineKeyboardButton(text="🎮 Игры", callback_data="play_games")],
         [InlineKeyboardButton(text=f"🌟 Баланс: {user.stars:.2f}⭐", callback_data="show_stars")],
         [InlineKeyboardButton(text="👥 Рефералы (+3⭐)", callback_data="show_referrals")],
-    ]
-    
-    if not user.sponsors_checked:
-        buttons.append([InlineKeyboardButton(text="✅ Проверить спонсоров", callback_data="check_sponsors")])
-    
-    buttons.extend([
         [InlineKeyboardButton(text="📰 Новости", url="https://t.me/GiftBoxNews")],
         [InlineKeyboardButton(text="📄 Соглашение", url="https://t.me/useragreement_GiftBox")]
-    ])
+    ]
     
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -116,7 +110,7 @@ def get_sponsors_keyboard():
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="1⃣ Спонсор 1", url="https://t.me/starsy_zarabotox_bot?start=8318454113")],
         [InlineKeyboardButton(text="2⃣ Спонсор 2", url="http://t.me/StarsovEarnBot?start=ycntHR20E")],
-        [InlineKeyboardButton(text="3⃣ Спонсор 3", url="https://t.me/GoGift_official_bot?startapp=undefined")],
+        [InlineKeyboardButton(text="3⃣ Спонсор 3", url="https://t.me/GoGift_official_bot?startapp=vfGuGaS8c")],
         [InlineKeyboardButton(text="4⃣ Спонсор 4", url="https://t.me/GiftsBattle_bot?startapp=ref_Vp7GrD1ZV")],
         [InlineKeyboardButton(text="5⃣ Спонсор 5", url="https://t.me/GiftBoxNews")],
         [InlineKeyboardButton(text="✅ Я подписался", callback_data="verify_sponsors")]
@@ -171,7 +165,7 @@ async def start(message: types.Message):
     if len(args) > 1 and args[1].startswith('ref_'):
         referrer_id = args[1][4:]
         if referrer_id != user.user_id and referrer_id in user_data:
-            if not user.referrer:  # Проверяем, что у пользователя еще нет реферера
+            if not user.referrer:
                 user.referrer = referrer_id
                 referrer = get_user(referrer_id)
                 if user.user_id not in referrer.referrals:
@@ -179,26 +173,39 @@ async def start(message: types.Message):
                     referrer.stars += 3.0
                     await bot.send_message(
                         referrer_id,
-                        f"🎉 <b>Новый реферал!</b>\n"
-                        f"👤 ID: <code>{user.user_id}</code>\n"
-                        f"💰 Получено: <b>+3⭐</b>\n"
-                        f"👥 Всего: <b>{len(referrer.referrals)}</b>\n\n"
-                        f"🌟 Ваш баланс: <b>{referrer.stars:.2f}⭐</b>",
-                        parse_mode="HTML"
+                        f"🎉 Новый реферал!\n"
+                        f"👤 ID: {user.user_id}\n"
+                        f"💰 Получено: +3⭐\n"
+                        f"👥 Всего: {len(referrer.referrals)}\n\n"
+                        f"🌟 Ваш баланс: {referrer.stars:.2f}⭐"
                     )
                     save_data()
     
     welcome_msg = (
-        f"🎁 <b>Добро пожаловать, {message.from_user.first_name}!</b>\n\n"
-        f"🌟 <b>Ваш баланс:</b> {user.stars:.2f}⭐\n\n"
-        f"💎 <i>Зарабатывайте звёзды и обменивайте их на призы!</i>"
+        f"🎁 Добро пожаловать, {message.from_user.first_name}!\n\n"
+        f"🌟 Ваш баланс: {user.stars:.2f}⭐\n\n"
+        f"💎 Зарабатывайте звёзды и обменивайте их на призы!"
     )
     
     await message.answer(
         welcome_msg,
-        reply_markup=get_main_keyboard(user.user_id),
-        parse_mode="HTML"
+        reply_markup=get_main_keyboard(user.user_id)
     )
+    
+    if not user.sponsors_checked:
+        sponsors_message = (
+            "📢 Привет! Чтобы продолжить:\n\n"
+            "1. Перейди к боту спонсора\n"
+            "2. Нажми Старт\n"
+            "3. Вернись сюда и нажми 'Я подписался'\n\n"
+            "Список спонсоров:"
+        )
+        await message.answer(
+            sponsors_message,
+            reply_markup=get_sponsors_keyboard(),
+            disable_web_page_preview=True
+        )
+    
     save_data()
 
 @dp.callback_query(F.data == "earn_stars")
@@ -231,25 +238,28 @@ async def show_referrals(callback: types.CallbackQuery):
     ref_link = get_referral_link(user.user_id)
     
     message_text = (
-        f"👥 <b>Ваша реферальная программа</b>\n\n"
-        f"🔗 <b>Ваша ссылка:</b>\n<code>{ref_link}</code>\n\n"
-        f"📊 <b>Статистика:</b>\n"
-        f"• Приглашено: <b>{ref_count} чел</b>\n"
-        f"• Заработано: <b>{earned}⭐</b>\n\n"
-        f"💡 <i>Каждый приглашенный друг приносит вам +3⭐</i>"
+        f"👥 Ваша реферальная программа\n\n"
+        f"🔗 Ваша ссылка:\n{ref_link}\n\n"
+        f"📊 Статистика:\n"
+        f"• Приглашено: {ref_count} чел\n"
+        f"• Заработано: {earned}⭐\n\n"
+        f"💡 Каждый приглашенный друг приносит вам +3⭐"
     )
     
     share_button = InlineKeyboardButton(
         text="📤 Поделиться ссылкой", 
         url=f"https://t.me/share/url?url={ref_link}&text=Присоединяйся%20к%20GiftBox%20и%20зарабатывай%20звёзды!"
     )
+    back_button = InlineKeyboardButton(text="🔙 Назад", callback_data="back_to_main")
     
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[[share_button]])
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [share_button],
+        [back_button]
+    ])
     
     await callback.message.edit_text(
         message_text,
-        reply_markup=keyboard,
-        parse_mode="HTML"
+        reply_markup=keyboard
     )
     await callback.answer()
 
@@ -289,33 +299,20 @@ async def play_dice(callback: types.CallbackQuery):
     await callback.message.edit_text(result, reply_markup=get_games_keyboard(callback.from_user.id))
     await callback.answer()
 
-@dp.callback_query(F.data == "check_sponsors")
-async def check_sponsors(callback: types.CallbackQuery):
-    sponsors_message = (
-        "📢 <b>Подпишитесь на всех спонсоров:</b>\n\n"
-        "1⃣ [Спонсор 1](https://t.me/starsy_zarabotox_bot?start=8318454113)\n"
-        "2⃣ [Спонсор 2](http://t.me/StarsovEarnBot?start=ycntHR20E)\n"
-        "3⃣ [Спонсор 3](https://t.me/GoGift_official_bot?startapp=undefined)\n"
-        "4⃣ [Спонсор 4](https://t.me/GiftsBattle_bot?startapp=ref_Vp7GrD1ZV)\n"
-        "5⃣ [Спонсор 5](https://t.me/GiftBoxNews)\n\n"
-        "<i>После подписки нажмите кнопку ниже</i>"
-    )
-    await callback.message.answer(
-        sponsors_message,
-        reply_markup=get_sponsors_keyboard(),
-        disable_web_page_preview=True,
-        parse_mode="HTML"
-    )
-    await callback.answer()
-
 @dp.callback_query(F.data == "verify_sponsors")
 async def verify_sponsors(callback: types.CallbackQuery):
     user = get_user(callback.from_user.id)
     user.sponsors_checked = True
-    await callback.message.answer(
-        "✅ <b>Проверено!</b> Теперь вы можете играть в игры",
-        reply_markup=get_main_keyboard(callback.from_user.id),
-        parse_mode="HTML"
+    
+    try:
+        await callback.message.delete()
+    except:
+        pass
+    
+    await bot.send_message(
+        callback.from_user.id,
+        "✅ Проверено! Теперь вы можете играть в игры",
+        reply_markup=get_main_keyboard(callback.from_user.id)
     )
     save_data()
     await callback.answer()
@@ -324,22 +321,32 @@ async def verify_sponsors(callback: types.CallbackQuery):
 async def play_games_menu(callback: types.CallbackQuery):
     user = get_user(callback.from_user.id)
     if not user.sponsors_checked:
-        await callback.answer("❌ Сначала проверьте спонсоров!", show_alert=True)
+        sponsors_message = (
+            "📢 Привет! Чтобы продолжить:\n\n"
+            "1. Перейди к боту спонсора\n"
+            "2. Нажми Старт\n"
+            "3. Вернись сюда и нажми 'Я подписался'\n\n"
+            "Список спонсоров:"
+        )
+        await callback.message.answer(
+            sponsors_message,
+            reply_markup=get_sponsors_keyboard(),
+            disable_web_page_preview=True
+        )
+        await callback.answer("❌ Сначала подпишитесь на спонсоров!", show_alert=True)
         return
     
     await callback.message.edit_text(
-        "🎮 <b>Выберите игру:</b>",
-        reply_markup=get_games_keyboard(callback.from_user.id),
-        parse_mode="HTML"
+        "🎮 Выберите игру:",
+        reply_markup=get_games_keyboard(callback.from_user.id)
     )
     await callback.answer()
 
 @dp.callback_query(F.data == "back_to_main")
 async def back_to_main(callback: types.CallbackQuery):
     await callback.message.edit_text(
-        "🔙 <b>Главное меню</b>",
-        reply_markup=get_main_keyboard(callback.from_user.id),
-        parse_mode="HTML"
+        "🔙 Главное меню",
+        reply_markup=get_main_keyboard(callback.from_user.id)
     )
     await callback.answer()
 
